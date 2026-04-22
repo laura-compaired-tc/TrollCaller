@@ -123,15 +123,53 @@ TrollCaller/
 │   ├── llm.py             # Ollama async client + sentence truncation
 │   ├── tts_hume.py        # Hume Octave TTS + recording
 │   ├── prompts.py         # Character personas (the fun part!)
-│   ├── config.py          # Pydantic settings from .env
-│   └── ...                # Legacy modules (Twilio, Whisper, etc.)
-├── scripts/               # Voice & SFX generation helpers
+│   └── config.py          # Pydantic settings from .env
 ├── recordings/            # Saved battle recordings (MP3)
 ├── sfx/                   # Sound effects
 ├── requirements.txt
 ├── .env.example
 └── README.md
 ```
+
+## User Guide
+
+### Running a Battle
+
+```
+python -m trollcaller.battle [troller] [spammer] [turns] [--silent] [--record]
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `troller` | Margaret | The troll character (Margaret, Jayden, or Brad) |
+| `spammer` | Kevin | The scammer character (Kevin, Maria, or Jordan) |
+| `turns` | 20 | Number of back-and-forth exchanges |
+| `--silent` | off | Text-only mode, no voice (fast for testing prompts) |
+| `--record` | off | Save the full call audio as an MP3 in `recordings/` |
+
+### Example Battles
+
+```bash
+# Classic: sweet old lady vs car warranty scammer
+python -m trollcaller.battle Margaret Kevin
+
+# Astrology Karen vs crypto bro (chaotic)
+python -m trollcaller.battle Jayden Jordan 10 --record
+
+# Lonely guy vs fake tech support (heartbreaking + funny)
+python -m trollcaller.battle Brad Maria 10 --record
+
+# Quick text-only test (no TTS, instant)
+python -m trollcaller.battle Margaret Kevin 5 --silent
+```
+
+### Tips
+
+- **10 turns** is a good length for demos — enough for the escalation to kick in
+- **`--record`** removes latency gaps, so recordings sound like natural calls
+- **`--silent`** is great for tuning prompts without waiting for TTS
+- Characters can be passed by name (Margaret) or key (elderly_cat_lover)
+- Recordings are saved to `recordings/` with timestamps in the filename
 
 ## Prompt Engineering 🎭
 
