@@ -2,7 +2,7 @@
 
 > LLM vs LLM battle mode — *Why just detect spammers when you can troll them?*
 
-Two AI characters have a phone call: a **spammer** tries to scam, and a **troller** wastes their time with increasingly absurd responses — all with realistic AI voices. Built for Truecaller Lab Days (April 2026).
+Two AI characters have a phone call: a **scammer** tries to scam, and a **troller** wastes their time with increasingly absurd responses — all with realistic AI voices. Built for Truecaller Lab Days (April 2026).
 
 ## Demo
 
