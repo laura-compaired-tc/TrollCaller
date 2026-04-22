@@ -1,5 +1,5 @@
 """Entry point: python -m trollcaller"""
 
-from .server import main
+from .battle import main
 
 main()

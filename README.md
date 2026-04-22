@@ -125,7 +125,6 @@ TrollCaller/
 │   ├── prompts.py         # Character personas (the fun part!)
 │   └── config.py          # Pydantic settings from .env
 ├── recordings/            # Saved battle recordings (MP3)
-├── sfx/                   # Sound effects
 ├── requirements.txt
 ├── .env.example
 └── README.md
