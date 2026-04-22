@@ -1,40 +1,69 @@
 # 🤙 TrollCaller
 
-> Voice-cloned spam-callback bot — *Lenny, but powered by LLMs*
+> LLM vs LLM battle mode — *Why just detect spammers when you can troll them?*
 
-A bot that answers spam calls with a realistic AI-generated voice, engages the scammer in a long pointless conversation, wasting their time. Built for Truecaller Lab Days (April 2026).
+Two AI characters have a phone call: a **spammer** tries to scam, and a **troller** wastes their time with increasingly absurd responses — all with realistic AI voices. Built for Truecaller Lab Days (April 2026).
+
+## Demo
+
+Run a battle and listen live, or use `--record` to save the call as an MP3:
+
+```bash
+python -m trollcaller.battle Margaret Kevin 10 --record
+```
+
+Recorded demos are in the `recordings/` folder.
 
 ## Architecture
 
 ```
-Incoming Call (Twilio)
-        │
-        ▼
-   WebSocket Media Stream
-        │
-        ▼
-┌──────────────────────┐
-│   Python Server      │
-│                      │
-│  Audio In ──► Whisper (STT)
-│                │
-│                ▼
-│           Ollama/LLM (Brain)
-│                │
-│                ▼
-│           Piper TTS ──► Audio Out
-└──────────────────────┘
+┌─────────────────┐       ┌─────────────────┐
+│  Spammer LLM    │◄─────►│  Troller LLM    │
+│  (e.g. Kevin)   │       │  (e.g. Margaret) │
+└────────┬────────┘       └────────┬────────┘
+         │                         │
+         ▼                         ▼
+┌──────────────────────────────────────────┐
+│         Hume Octave TTS                  │
+│   Custom voices per character            │
+└────────────────┬─────────────────────────┘
+                 │
+                 ▼
+┌──────────────────────────────────────────┐
+│         Battle Engine (asyncio)          │
+│   Parallel pipeline: LLM + TTS overlap  │
+│   --record saves full call as MP3       │
+└──────────────────────────────────────────┘
 ```
+
+**Key trick:** While TTS synthesizes the current line, the LLM generates the next response — cutting latency roughly in half.
 
 ## Components
 
 | Component | What | Implementation |
 |-----------|------|----------------|
-| Phone number | Receives calls | Twilio (~$1/mo + $0.01/min) |
-| STT | Transcribe caller | Whisper (local, free) |
-| LLM | Generate stalling responses | Ollama + Llama 3.1 8B (local, free) |
-| TTS | Speak back to caller | Piper TTS (local, free) |
-| Glue code | Python server | FastAPI + WebSockets |
+| LLM | Generates dialogue in character | Ollama + gemma2:9b (local, free) |
+| TTS | Realistic voice synthesis | Hume Octave (custom voices per persona) |
+| Battle Engine | Turn-by-turn orchestration | Python asyncio parallel pipeline |
+| Recording | Save calls as MP3 | `--record` flag, saved to `recordings/` |
+
+## Characters
+
+### Trollers 🛡️
+| Name | Persona | Style |
+|------|---------|-------|
+| **Margaret** | Elderly cat lady | Sweet & confused → cat has a law degree |
+| **Jayden** | Astrology Karen | Asks your zodiac sign → Yelp reviews your aura |
+| **Brad** | Lonely enthusiast | Friendly & eager → names his goldfish after you |
+
+### Spammers 📞
+| Name | Scam | Style |
+|------|------|-------|
+| **Kevin** | Car warranty | Pushy, vague "Vehicle Department" |
+| **Maria** | Fake tech support | Concerned, made-up jargon |
+| **Jordan** | Crypto investment | Hype, fake testimonials |
+
+All characters use **slow escalation** — they start believable and get progressively absurd.
 
 ## Quick Start
 
@@ -42,10 +71,9 @@ Incoming Call (Twilio)
 
 - Python 3.11+
 - [Ollama](https://ollama.ai/) installed
-- A Twilio account with a phone number
-- [ngrok](https://ngrok.com/) for local development
+- A [Hume](https://app.hume.ai/) API key (free tier works)
 
-### 1. Install dependencies
+### 1. Install
 
 ```bash
 cd TrollCaller
@@ -54,88 +82,66 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Download models
+### 2. Pull the LLM
 
 ```bash
-# Pull the LLM
-ollama pull llama3.1:8b
-
-# Download Piper TTS voice (run once)
-python scripts/download_piper_voice.py
+ollama pull gemma2:9b
 ```
 
-### 3. Install Whisper model
-
-The first run will auto-download the Whisper model (~1.5GB for "base").
-
-### 4. Configure environment
+### 3. Configure
 
 ```bash
 cp .env.example .env
-# Edit .env with your Twilio credentials
+# Add your HUME_API_KEY to .env
 ```
 
-### 5. Run locally (mic → speaker test)
+### 4. Run a battle
 
 ```bash
-python -m trollcaller.local_test
+# With voice (default)
+python -m trollcaller.battle Margaret Kevin
+
+# Silent mode (text only, fast iteration)
+python -m trollcaller.battle Margaret Kevin --silent
+
+# Record the call as MP3
+python -m trollcaller.battle Margaret Kevin 10 --record
+
+# Mix and match characters
+python -m trollcaller.battle Jayden Jordan 10 --record
+python -m trollcaller.battle Brad Maria 10 --record
 ```
 
-### 6. Run the Twilio server
-
-```bash
-# Terminal 1: Start the server
-python -m trollcaller.server
-
-# Terminal 2: Expose via ngrok
-ngrok http 8765
-```
-
-Then configure your Twilio number's webhook to `https://<ngrok-url>/incoming-call`.
+**Usage:** `python -m trollcaller.battle [troller] [spammer] [turns] [--silent] [--record]`
 
 ## Project Structure
 
 ```
 TrollCaller/
 ├── trollcaller/
-│   ├── __init__.py
-│   ├── server.py          # FastAPI server + Twilio webhook
-│   ├── media_stream.py    # WebSocket handler for Twilio Media Streams
-│   ├── stt.py             # Whisper speech-to-text
-│   ├── llm.py             # Ollama LLM integration
-│   ├── tts.py             # Piper TTS integration
-│   ├── pipeline.py        # STT → LLM → TTS orchestration
-│   ├── prompts.py         # System prompts (the fun part!)
-│   ├── audio_utils.py     # Audio format conversion helpers
-│   └── local_test.py      # Test without Twilio (mic → speaker)
-├── scripts/
-│   └── download_piper_voice.py
-├── voices/                # Piper voice models (downloaded)
-├── recordings/            # Saved call recordings
+│   ├── battle.py          # LLM vs LLM battle engine
+│   ├── llm.py             # Ollama async client + sentence truncation
+│   ├── tts_hume.py        # Hume Octave TTS + recording
+│   ├── prompts.py         # Character personas (the fun part!)
+│   ├── config.py          # Pydantic settings from .env
+│   └── ...                # Legacy modules (Twilio, Whisper, etc.)
+├── scripts/               # Voice & SFX generation helpers
+├── recordings/            # Saved battle recordings (MP3)
+├── sfx/                   # Sound effects
 ├── requirements.txt
 ├── .env.example
 └── README.md
 ```
 
-## System Prompt Engineering 🎭
+## Prompt Engineering 🎭
 
-The bot's personality is defined in `trollcaller/prompts.py`. Current personas:
+The magic is in `trollcaller/prompts.py`:
 
-- **Elderly Cat Lover** — Goes off on tangents about their cat Mittens
-- **Confused Grandpa** — Hard of hearing, keeps asking to repeat everything
-- **Overly Enthusiastic** — WAY too excited about whatever they're selling
-
-## Latency Budget
-
-Target: <500ms end-to-end response time
-
-| Stage | Target | Notes |
-|-------|--------|-------|
-| STT | ~100ms | Whisper base, streaming chunks |
-| LLM | ~200ms | Ollama, first token |
-| TTS | ~100ms | Piper, streaming |
-| Network | ~100ms | Twilio overhead |
+- **Slow escalation** — Turns 1-3 sound real, turns 4-6 get odd, turns 7+ go fully absurd
+- **No repetition** — Each reply must be fresh and different
+- **Short bursts** — 1-2 sentences max (it's a phone call)
+- **Spammer rules** — Never make up names, never break character, deflect charmingly
 
 ## Legal Note ⚖️
 
-Only use on calls you receive. Don't initiate calls to random numbers. Recording laws vary by country — keep it as an internal demo.
+This is a hackathon demo. The "calls" are simulated LLM-vs-LLM conversations — no real phone calls are made.
